@@ -9,6 +9,7 @@ THIS_FILE := $(lastword $(MAKEFILE_LIST))
 .PHONY: $(shell awk 'BEGIN {FS = ":"} /^[^ .:]+:/ {printf "%s ", $$1}' $(THIS_FILE))
 
 build-and-push: ## Build and push to dockerhub
+	# No real idea what this buildx builder stuff is or if this is exactly correct
 	docker buildx rm postgres-timescaledb-pglogical || true
 	docker buildx create --name postgres-timescaledb-pglogical --use
 	DOCKER_BUILDKIT=1 docker buildx build \
