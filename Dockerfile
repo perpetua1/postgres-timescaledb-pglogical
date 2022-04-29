@@ -1,8 +1,10 @@
+ARG PG_MAJOR=14
+
 #########################################################################################
 # Grab the offical timescale image to copy some stuff out of
 #########################################################################################
 
-FROM timescale/timescaledb:latest-pg14 AS timescaledb
+FROM timescale/timescaledb:latest-pg${PG_MAJOR} AS timescaledb
 # Reference from timescale source image:
 #  https://github.com/timescale/timescaledb-docker/blob/main/Dockerfile
 
@@ -12,7 +14,8 @@ FROM timescale/timescaledb:latest-pg14 AS timescaledb
 
 # Source for official postgres image: https://github.com/docker-library/postgres/blob/master/14/bullseye/Dockerfile
 
-FROM postgres:14 AS build
+ARG PG_MAJOR
+FROM postgres:${PG_MAJOR} AS build
 
 RUN set -ex && \
     apt-get update && apt-get install --no-install-suggests --no-install-recommends --yes \
@@ -29,15 +32,16 @@ RUN set -ex && \
     apt-get update
 
 RUN apt-get download \
-    postgresql-14-pglogical \
-    timescaledb-2-postgresql-14 \
-    timescaledb-2-loader-postgresql-14
+    postgresql-${PG_MAJOR}-pglogical \
+    timescaledb-2-postgresql-${PG_MAJOR} \
+    timescaledb-2-loader-postgresql-${PG_MAJOR}
 
 #########################################################################################
 # Final "real" image
 #########################################################################################
 
-FROM postgres:14
+ARG PG_MAJOR
+FROM postgres:${PG_MAJOR}
 
 COPY --from=build *.deb .
 
@@ -50,5 +54,7 @@ COPY --from=timescaledb /docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.
 
 RUN set -ex && \
     dpkg -i *.deb && \
-    sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,pglogical,\2'/;s/,'/'/" /usr/share/postgresql/14/postgresql.conf.sample && \
+    sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,pglogical,\2'/;s/,'/'/" /usr/share/postgresql/${PG_MAJOR}/postgresql.conf.sample && \
+    sed -r -i "s/[#]*\s*(wal_level)\s*=\s*'?(.*)'?/\1 = logical/" /usr/share/postgresql/${PG_MAJOR}/postgresql.conf.sample && \
+    sed -r -i "s/[#]*\s*(wal_compression)\s*=\s*'?(.*)'?/\1 = on/" /usr/share/postgresql/${PG_MAJOR}/postgresql.conf.sample && \
     echo "CREATE EXTENSION IF NOT EXISTS pglogical;" > /docker-entrypoint-initdb.d/002_pglogical.sql
