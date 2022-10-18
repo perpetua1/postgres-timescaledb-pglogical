@@ -25,6 +25,7 @@ build-only-%: ## Build only for a specific postgres version
 		--cache-from type=local,src=/tmp/docker-cache \
 		--cache-to type=local,dest=/tmp/docker-cache,mode=max \
 		$(EXTRA_DOCKER_BUILD_ARGS) \
+		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--tag perpetua1/postgres-timescaledb-pglogical:$(PG_MAJOR)-latest \
 		.
 
